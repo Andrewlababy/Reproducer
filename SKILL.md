@@ -1,137 +1,140 @@
 ---
 name: reproducer
 description: >-
-  帮产品经理把用户反馈走一遍，判断是缺陷、疑似使用问题，还是信息不足。
-  用 playwright-cli 操作浏览器，产出编号为 W1… 的复现记录（清单加细项，细项含逐步截图），
-  再推送到用户选定的协作工具（Notion、Jira、Linear、Slack 等）或只留在本地。
-  使用时机：用户说 reproducer、复现用户反馈、用户反馈、bug 反馈、报告模式、助手模式、复现助手。
+  Helps a product manager triage user bug reports: reproduces each report in a browser
+  with playwright-cli and classifies it as a defect, likely user error, or insufficient information.
+  Produces numbered reproduction records (W1, W2, ...) as a list plus detail pages with
+  step-by-step screenshots, then pushes them to the tool the user chooses (Notion, Jira,
+  Linear, Slack, and so on) or keeps them local. Use when the user says reproducer,
+  reproduce user feedback, user feedback, bug report triage, report mode, assistant mode,
+  or reproduction assistant.
 ---
 
 # reproducer
 
-产品经理收到用户反馈后，用本技能过一遍，再决定要不要交给研发。只复现对方已经描述的产品现象（点了没反应、数据不对、流程走不通）。不写利用步骤，不构造攻击载荷，不演示远程执行。
+A product manager receives user bug reports and uses this skill to check each one before handing it to engineering. Reproduce only the product behavior that the report describes (a click does nothing, data is wrong, a flow cannot be completed). Do not write exploit steps, build attack payloads, or demonstrate remote code execution.
 
-本技能只规定复现记录的内容和结构。推送到哪个工具、怎么调用那个工具，由执行者用当前已接入的能力自行完成。
+This skill defines only the content and structure of the reproduction records. Which tool receives them, and how to call that tool, is up to the executing agent with the integrations it already has.
 
-浏览器只用全局命令 `playwright-cli`。
+Use only the global `playwright-cli` command for the browser.
 
-## 配置
+## Configuration
 
-读本技能目录下的 `config.md`。
+Read `config.md` in this skill directory.
 
-- `default_mode` 为 `report` 或 `assistant`：用该模式，一句话告知，不要再问。
-- 留空：在做任何分析之前先问用户选「报告模式」还是「助手模式」。
-- 用户要设默认（「以后都用报告模式」）：写入 `default_mode`，本次就用它。
-- `destination`、`destination_ref` 的用法见「推送」。
+- `default_mode` is `report` or `assistant`: use that mode, tell the user in one sentence, and do not ask again.
+- Empty: before any analysis, ask the user to choose report mode or assistant mode.
+- The user sets a default (for example "always use report mode"): write it to `default_mode` and use it for this run.
+- For `destination` and `destination_ref`, see "Push".
 
-两种模式的差别只在意愿：助手模式是用户自己点（更安心、更准确）；报告模式是让 AI 过一遍。不要按反馈清不清楚替用户选模式。
+The two modes differ only in what the user wants: in assistant mode the user clicks through the steps personally (more confidence, more accuracy); in report mode the agent runs the whole check. Do not choose a mode for the user based on how clear the report is.
 
-## 开跑前
+## Before you start
 
-1. 先列出还缺什么，再问。常见是网址和登录账号。反馈里已有的不要再问。
-2. 账号只用于当次登录：不写入记录、不写入 `config.md`、不对会话做 `state-save`。
-3. 一条消息里有多条反馈时，先拆成多条，再逐条做。编号在写记录前才定（见「编号」），拆分时只用「第 1 条」「第 2 条」称呼。
+1. List what you still need, then ask. Usually this is the URL and login credentials. Do not ask for anything the report already gives.
+2. Use credentials only to log in during this run. Do not write them to records or to `config.md`. Do not run `state-save` on the session.
+3. If one message contains several reports, split them first and handle them one at a time. Assign record numbers only when writing records (see "Numbering"). While splitting, refer to them as "report 1", "report 2".
 
-## 截图
+## Screenshots
 
-- 用 `playwright-cli screenshot --filename=<路径>`，路径为当前工作区下 `reproducer-reports/<本批日期>/<条目序号>/step-<两位序号>.png`。目录不存在先建。
-- 截图前若画面上有账号或密码明文，先对该输入框模糊处理，再截图：`playwright-cli eval "el => el.style.filter='blur(6px)'" <ref>`。不要为了避开账号而省掉这一步的截图。
+- Use `playwright-cli screenshot --filename=<path>`. The path is `reproducer-reports/<batch date>/<report index>/step-<two-digit number>.png` under the current workspace. Create the folder if it does not exist.
+- Before a screenshot, if a username or password is visible in plain text, blur that input first: `playwright-cli eval "el => el.style.filter='blur(6px)'" <ref>`. Do not skip the screenshot for that step to hide the credentials.
 
-## Capture 规则（两种模式通用）
+## Capture rules (both modes)
 
-- 一步只有一个可见操作（打开网址、点击、输入一个框、选择、滚动、打开菜单）。
-- 每步先做，再截图。截图必须是这一步之后的画面。
-- 下一步从上一张截图的画面开始。登录也要拆开：打开登录页、输入账号、输入密码、点击登录，各算一步。
-- 没走过的步不写。走不通就停，最后一步写明卡在哪、画面上是什么。
+- One step contains exactly one visible action (open a URL, click, type into one field, select, scroll, open a menu).
+- Do the action first, then take the screenshot. The screenshot must show the screen after that action.
+- The next step starts from the screen in the previous screenshot. Split login too: open the login page, type the username, type the password, click log in. Each is one step.
+- Do not write steps that were not performed. If you cannot continue, stop. In the last step, state where you got stuck and what the screen shows.
 
-## 结论（三选一）
+## Verdict (choose one)
 
-写在细项里，不作为清单的列。
+Write the verdict in the detail page. It is not a list field.
 
-| 结论 | 何时使用 | 状态 |
+| Verdict | When to use | Status |
 |---|---|---|
-| 是缺陷 | 按正常用法走，反馈里的现象出现了 | 已复现 |
-| 疑似使用问题 | 按正常用法走，现象不出现，且对得上用错了（点错、漏填、权限不符） | 未能复现 |
-| 信息不足 | 已知步骤走完仍不出现，也看不出是用错 | 未能复现 |
+| Defect | Following normal usage, the reported behavior appears | Reproduced |
+| Likely user error | Following normal usage, the behavior does not appear, and the report matches a usage mistake (wrong click, missing input, wrong permissions) | Not reproduced |
+| Insufficient information | All known steps are done, the behavior does not appear, and there is no sign of a usage mistake | Not reproduced |
 
-出现的不是反馈里说的那个现象：状态用「未能复现」，写明实际看到了什么。
+If a different behavior appears instead of the reported one: set the status to Not reproduced and describe what you actually saw.
 
-## 报告模式
+## Report mode
 
-1. `playwright-cli open <网址>`（无界面即可）。
-2. 按 Capture 规则从登录走到现象出现，或走到走不下去。
-3. `playwright-cli close`。
-4. 写记录，再推送。
+1. `playwright-cli open <url>` (headless is fine).
+2. Follow the capture rules from login until the reported behavior appears or you cannot continue.
+3. `playwright-cli close`.
+4. Write the record, then push it.
 
-## 助手模式
+## Assistant mode
 
-1. 把零碎反馈整理成产品经理能照着点的步骤。第 1 步是登录完成后要做的第一个操作，一步一个操作，不跳步。
-2. `playwright-cli open --headed <网址>`，必须带 `--headed`，否则用户看不到窗口。
-3. 按 Capture 规则完成登录的每一步，并逐步截图。停在登录完成后的画面，即第 1 步的起点。不要做第 1 步。
-4. 把第 1 步起的全部步骤发给用户，告诉他在已打开的浏览器窗口里接着点。浏览器保持打开。
-5. 用户说完实际看到什么之后，`playwright-cli close`，再按「结论」写记录并推送。Capture 含登录各步的截图；之后的步骤照写，每步标注「由产品经理手工执行」，最后写用户确认的结果。用户还没回复之前，不写这条记录。
+1. Turn the fragmented report into steps the product manager can follow. Step 1 is the first action after login is complete. One action per step, no skipped steps.
+2. `playwright-cli open --headed <url>`. You must pass `--headed`, or the user cannot see the window.
+3. Follow the capture rules for each login step and take a screenshot after each one. Stop on the screen after login is complete, which is where step 1 starts. Do not perform step 1.
+4. Send the user all steps starting from step 1, and tell them to continue in the browser window that is already open. Keep the browser open.
+5. After the user tells you what they actually saw, run `playwright-cli close`, then choose the verdict, write the record, and push it. The capture contains the screenshots of each login step. Write the remaining steps as given, mark each one "Performed manually by the product manager", and end with the result the user confirmed. Do not write the record before the user replies.
 
-## 复现记录
+## Reproduction record
 
-记录分两层：**清单**一行一条，**细项**是点进某一行看到的内容。
+A record has two levels: the **list** has one row per report, and the **detail page** is what you see when you open a row.
 
-清单只有这四个字段：
+The list has exactly these four fields:
 
-| 字段 | 取值 |
+| Field | Value |
 |---|---|
-| 编号 | W1、W2… |
-| 标题 | 一句话 |
-| 状态 | 已复现、未能复现 |
-| URL | 问题所在地址 |
+| ID | W1, W2, ... |
+| Title | One sentence |
+| Status | Reproduced, Not reproduced |
+| URL | The address where the problem occurs |
 
-细项用用户的语言，结构固定如下，不要加建议、不要加严重程度：
+Write the detail page in English with this fixed structure. Do not add recommendations or severity.
 
 ```markdown
-# W1 标题
+# W1 Title
 
-## 结论
-是缺陷
+## Verdict
+Defect
 
 ## Description
-反馈原文里的现象，加上这次实际看到的现象。
+The behavior in the original report, plus the behavior observed in this run.
 
 ## Impact
-影响谁，哪件事做不成。
+Who is affected and which task they cannot complete.
 
 ## Capture
-1. 打开登录页。
-![第 1 步](W1/step-01.png)
-2. 在「用户名」输入账号。
-![第 2 步](W1/step-02.png)
-3. 在「密码」输入密码。
-![第 3 步](W1/step-03.png)
-4. 点击「登录」。
-![第 4 步](W1/step-04.png)
-5. 点击「某某」。
-![第 5 步](W1/step-05.png)
+1. Open the login page.
+![Step 1](W1/step-01.png)
+2. Type the username in "Username".
+![Step 2](W1/step-02.png)
+3. Type the password in "Password".
+![Step 3](W1/step-03.png)
+4. Click "Log in".
+![Step 4](W1/step-04.png)
+5. Click "Some button".
+![Step 5](W1/step-05.png)
 ```
 
-### 本地记录
+### Local records
 
-无论推送到哪里，都先在 `reproducer-reports/<本批日期>/` 下写好本地记录：
+Whatever the destination, first write the local records under `reproducer-reports/<batch date>/`:
 
-- `index.md`：清单表格，每行的标题链接到对应细项文件。
-- `W<n>.md`：细项。截图用相对路径引用同目录下的 `W<n>/step-xx.png`（写记录时把截图所在的条目序号目录改名为 `W<n>`）。
+- `index.md`: the list as a table. Each title links to its detail file.
+- `W<n>.md`: the detail page. Reference screenshots by relative path as `W<n>/step-xx.png`. When writing the record, rename the screenshot folder from the report index to `W<n>`.
 
-### 编号
+### Numbering
 
-写记录前先看目标里已有的最大编号（`destination` 为 `local` 时看 `reproducer-reports/` 下所有 `index.md`），从下一个号接着编；没有则从 W1 开始。一次写多条时依次递增。
+Before writing records, find the highest existing ID in the destination (when `destination` is `local`, check every `index.md` under `reproducer-reports/`) and continue from the next number. If there is none, start at W1. When writing several records at once, increment for each.
 
-## 推送
+## Push
 
-1. `destination` 为 `local`：到本地记录为止，告诉用户路径。
-2. `destination` 已有值：用当前已接入的对应工具，把记录推到 `destination_ref`。
-3. 留空：问用户推到哪个工具、哪个位置；用户也可以选只留本地。用户同意后写入 `destination` 和 `destination_ref`。
+1. `destination` is `local`: stop after the local records and tell the user the path.
+2. `destination` has another value: use the matching integration that is already connected to push the records to `destination_ref`.
+3. Empty: ask the user which tool and which location to push to; the user can also choose local only. After the user agrees, write `destination` and `destination_ref`.
 
-推送时保持结构不变：
+Keep the structure when pushing:
 
-- 清单对应目标工具里的列表单位（数据库行、issue、工单、消息串等），四个字段都要有，状态用目标工具里最接近的字段承载。
-- 细项对应该条目的正文，截图作为图片或附件放在对应步骤下面。
-- 目标里还没有承载清单的位置（例如还没有数据库）：先征得用户同意再创建，创建后写回 `destination_ref`。
-- 某张截图推送失败：在该步写明本地文件路径，并告诉用户哪几张没传上去。
-- 当前环境没有接入用户选的工具：停在本地记录，告诉用户需要先接入该工具。
+- Map the list to the tool's list unit (database row, issue, ticket, message thread, and so on). All four fields must be present. Put the status in the closest field the tool offers.
+- Map the detail page to the body of that item. Put each screenshot as an image or attachment under its step.
+- If the destination has no place for the list yet (for example, no database exists): ask the user before creating one, then write it to `destination_ref`.
+- If a screenshot fails to upload: write its local file path in that step, and tell the user which screenshots were not uploaded.
+- If the tool the user chose is not connected in the current environment: stop at the local records and tell the user to connect that tool first.
