@@ -87,7 +87,7 @@ The list has exactly these four fields:
 | Status | Reproduced, Not reproduced |
 | URL | The address where the problem occurs |
 
-Write the detail page in English with this fixed structure. Do not add recommendations or severity.
+Write the whole record in the user's language: field names, status and verdict labels, headings, and body text. The tables and template in this skill are in English only as a reference; translate them and keep the same structure. Do not add recommendations or severity.
 
 ```markdown
 # W1 Title
